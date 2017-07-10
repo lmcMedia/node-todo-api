@@ -5,6 +5,12 @@ const request = require('supertest');
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 
+const todos = [{
+  text: 'First test todo'
+}, {
+  text: 'Second test todo'
+}];
+
 // can also do like this without destructuring
 //var app = require('./../server').app;
 
@@ -12,7 +18,12 @@ const {Todo} = require('./../models/todo');
 beforeEach((done) => {
   // remove all items from Todo database for testing
   // before any tests are run
-  Todo.remove({}).then(() => done());
+  //Todo.remove({}).then(() => done());
+
+  // insert many
+  Todo.remove({}).then(() => {
+    return Todo.insertMany(todos);
+  }).then(() => done());
 });
 
 describe('Routes', () => {
@@ -41,7 +52,7 @@ describe('Routes', () => {
 
           // retrieve all records and make some assertions
           // (the BeforeEach method empties out db so todos.length assumption of 1 is correct)
-          Todo.find().then((todos) => {
+          Todo.find({text}).then((todos) => {
             expect(todos.length).toBe(1);
             expect(todos[0].text).toBe(text);
             done();
@@ -60,10 +71,23 @@ describe('Routes', () => {
 
           // get the todos back and use as param
           Todo.find().then((todos) => {
-            expect(todos.length).toBe(0);
+            expect(todos.length).toBe(2); // from const todos at top
             done();
           }).catch((e) => done(e));
-        })
+        });
+      });
+    });
+
+    describe('GET /todos', () => {
+      it('should get all todos', (done) => {
+          // supertest request
+          request(app)
+          .get('/todos')
+          .expect(200)
+          .expect((res) => {
+            expect(res.body.todos.length).toBe(2);
+          })
+          .end(done);
       });
     });
   });

@@ -48,7 +48,7 @@ app.get('/todos', (req, res) => {
   // get a list of todos back
   Todo.find().then((todos) => {
     // send back the full list (we send back an object since we can add to the object if we want to later)
-    res.send(todos);
+    res.send({todos});
   }, (e) => {
     res.status(400).send(e);
   })
