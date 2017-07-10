@@ -10,7 +10,7 @@ const {Todo} = require('./../models/todo');
 
 // lets us run code before each test case
 beforeEach((done) => {
-  // fake remove all items from Todo database for testing
+  // remove all items from Todo database for testing
   // before any tests are run
   Todo.remove({}).then(() => done());
 });
