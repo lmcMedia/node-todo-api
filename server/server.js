@@ -14,14 +14,18 @@ var app = express();
 // now we can send JSON to Express
 app.use(bodyParser.json());
 
-// this gets the POST from postman
+// this gets the POST from POSTMAN's Body raw data in JSON format
+// This is an HTTP Endpoint for the Todo REST API
 app.post('/todos', (req, res) => {
-  // create instance of Mongoose Model
+  // console.log(req.body);
+
+  // create instance of Mongoose Model Todo
   var todo = new Todo({
     text: req.body.text
   });
 
   // Save the data to MongoDB Todo that was POSTed from /todos url
+  // Sends data back to the user who hit the API
   todo.save().then((doc) => {
     // The Model Todo has the following fields (text, completed, completedAt)
     // in addition, an _id is auto generated, so the record that is sent back
@@ -33,7 +37,7 @@ app.post('/todos', (req, res) => {
     //     "completedAt": null,
     //     "completed": false
     // }
-    // response contains the document from the DB with the data above
+    // RESPONSE contains the document from the DB with the data above
     res.send(doc);
   }, (err) => {
     res.status(400).send(err);
@@ -43,3 +47,6 @@ app.post('/todos', (req, res) => {
 app.listen(3000, () => {
   console.log('Server up on 3000');
 });
+
+// exports the express app created when var app = express();
+module.exports = {app};
