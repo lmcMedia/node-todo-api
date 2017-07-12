@@ -11,7 +11,6 @@ const {ObjectID}  = require('mongodb');
 const {Todo}      = require('./models/todo');
 const {User}      = require('./models/user');
 
-
 const app = express();
 
 // config Middleware
@@ -21,7 +20,6 @@ app.use(bodyParser.json());
 
 // POST =============================================================
 // this gets the POST from POSTMAN's Body raw data in JSON format
-// This is an HTTP Endpoint for the Todo REST API
 app.post('/todos', (req, res) => {
   // create instance of Mongoose Model Todo
   var todo = new Todo({
@@ -63,7 +61,19 @@ app.get('/todos/:id', (req, res) => {
   }).catch((err) => res.send('CAST ERROR - invalid id entered'));
 })
 
-// SERVER ========================================================
+// DELETE WITH ID ======================================================
+app.delete('/todos/:id', (req, res) => {
+  if (!ObjectID.isValid(req.params.id)) return res.status(404).send('Invalid ID entered');
+
+  Todo.findByIdAndRemove(req.params.id).then((todo) => {
+    if(!todo) return res.status(404).send('Todo id cannot be found.'); // prevents null
+    res.status(200).send({todo});
+  }).catch((err) => {
+    res.send('Cast Error - invalid id entered');
+  });
+})
+
+// SERVER ===============================================================
 app.listen(port, () => {
   console.log(`Server up on ${port}` );
 });
