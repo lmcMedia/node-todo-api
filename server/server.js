@@ -1,12 +1,16 @@
 // body-parse lets us send JSON to the server
 const express     = require('express');
 const bodyParser  = require('body-parser');
+// prep for Heroku
+// (*create start script and "engines" to establish which version of Node to run on Heroku inside package.json )
+const port        = process.env.PORT || 3000;
 
 // ES6 destructured references (returned results populated into {} vars)
 const {mongoose}  = require('./db/mongoose');
 const {ObjectID}  = require('mongodb');
 const {Todo}      = require('./models/todo');
 const {User}      = require('./models/user');
+
 
 const app = express();
 
@@ -60,8 +64,8 @@ app.get('/todos/:id', (req, res) => {
 })
 
 // SERVER ========================================================
-app.listen(3000, () => {
-  console.log('Server up on 3000');
+app.listen(port, () => {
+  console.log(`Server up on ${port}` );
 });
 
 // exports the express app created when var app = express();

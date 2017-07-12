@@ -16,12 +16,16 @@
     "supertest": "^3.0.0"
   },
   "scripts": {
+    "start": "node server/server.js",
     "test": "mocha server/**/*.test.js",
     "test-watch": "nodemon --exec \"npm test\""
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lmcMedia/node-todo-api.git"
+  },
+  "engines": {
+    "node": "8.1.2"
   },
   "keywords": [],
   "author": "",
