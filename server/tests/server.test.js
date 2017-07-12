@@ -8,13 +8,15 @@ const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 const {ObjectID} = require('mongodb');
 
-// for testing
+// Seed DATA for testing (we are not hitting the db)
 const todos = [{
   _id: new ObjectID(),
   text: 'First test todo'
 }, {
   _id: new ObjectID(),
-  text: 'Second test todo'
+  text: 'Second test todo',
+  completed: true,
+  completedAt: 333
 }];
 
 // lets us run code before each test case
@@ -35,7 +37,7 @@ describe('Routes', () => {
       // asyncronous call so make sure to include 'done'
       // TEST FOR CREATING A NEW TODO
       it('should create a new todo', (done) => {
-        var text = 'Test Todo text';
+        let text = 'Test Todo text';
 
         request(app)
         .post('/todos')
@@ -157,6 +159,48 @@ describe('Routes', () => {
         request(app)
           .delete(`/todos/123abc`)
           .expect(404)
+          .end(done);
+      });
+    });
+
+    // PATCH /todos/:id  =======================================
+    describe('PATCH /todos/:id', () => {
+      it('should update the todo', (done) => {
+        let id = todos[0]._id.toHexString();
+        let text = 'Test Todo text';
+
+        request(app)
+          .patch(`/todos/${id}`)
+          .send({
+            completed: true,
+            text
+          })
+          .expect(200)
+          .expect((res) => {
+            expect(res.body.todo.text).toBe(text);
+            expect(res.body.todo.completed).toBe(true);
+            expect(res.body.todo.completedAt).toBeA('number');
+          })
+          .end(done);
+      });
+
+      it('should clear completedAt when todo is not completed', (done) => {
+        let id = todos[1]._id.toHexString();
+        let text = 'Something Different for 2';
+
+        request(app)
+          .patch(`/todos/${id}`)
+          .send({
+            completed: false,
+            text
+          })
+          .expect(200)
+          .expect((res) => {
+            expect(res.body.todo.text).toBe(text);
+            expect(res.body.todo.completed).toBe(false);
+            // if completed false, no completedAt value should exist
+            expect(res.body.todo.completedAt).toNotExist();
+          })
           .end(done);
       });
     });
