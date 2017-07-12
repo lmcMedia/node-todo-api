@@ -1,4 +1,4 @@
-// body-parse lets us send JSON to the server
+const _           = require('lodash');
 const express     = require('express');
 const bodyParser  = require('body-parser');
 // prep for Heroku
@@ -13,12 +13,15 @@ const {User}      = require('./models/user');
 
 const app = express();
 
-// config Middleware
+// config Middleware - body-parse lets us send JSON to Express
 // the return value of bodyParser.json() is a function that we need to give to Express
-// now we can send JSON to Express
 app.use(bodyParser.json());
 
-// POST =============================================================
+// ==================================================================
+// CRUD for the API
+// ==================================================================
+
+// POST (CRUD - Create) =============================================
 // this gets the POST from POSTMAN's Body raw data in JSON format
 app.post('/todos', (req, res) => {
   // create instance of Mongoose Model Todo
@@ -33,7 +36,7 @@ app.post('/todos', (req, res) => {
   }, (e) => res.status(400).send(e));
 });
 
-// GET ALL TODOS =====================================================
+// GET ALL TODOS (CRUD - Read) =======================================
 app.get('/todos', (req, res) => {
    // get a list of todos back
    Todo.find().then((todos) => {
@@ -44,7 +47,7 @@ app.get('/todos', (req, res) => {
    });
 });
 
-// GET WITH ID ========================================================
+// GET WITH ID (CRUD - Read) ==========================================
 // creates id variable in the todos/ url like todos/123456
 // so the API call containing the Todo id will receive back data
 app.get('/todos/:id', (req, res) => {
@@ -59,9 +62,34 @@ app.get('/todos/:id', (req, res) => {
     if (!todo) return res.status(404).send('Todo id cannot be found.');
     res.send({todo});
   }).catch((err) => res.send('CAST ERROR - invalid id entered'));
-})
+});
 
-// DELETE WITH ID ======================================================
+// PATCH (CRUD - Update) =============================================
+app.patch('/todos/:id', (req, res) => {
+  let id = req.params.id;
+  // lodash pick sets up which properties on the body can be updated.
+  // we dont want users updating or adding properties that arent specified here
+  // EXACTLY the same as Laravel's protected $fillable
+  let body = _.pick(req.body, ['text', 'completed']);
+
+  if (!ObjectID.isValid(req.params.id)) return res.status(404).send('Invalid ID entered');
+
+  // update completedAt property when changes on completed occur
+  if (_.isBoolean(body.completed) && body.completed) {
+    body.completedAt = new Date().getTime(); // returns JS timestamp
+  } else {
+    body.completed = false;
+    body.completedAt = null;
+  }
+
+  // update the Todo
+  Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
+    if (!todo) return res.status(404).send();
+    res.send({todo});
+  }).catch((e) => res.status(400).send());
+});
+
+// DELETE WITH ID (CRUD - Delete) =====================================
 app.delete('/todos/:id', (req, res) => {
   if (!ObjectID.isValid(req.params.id)) return res.status(404).send('Invalid ID entered');
 
@@ -71,7 +99,7 @@ app.delete('/todos/:id', (req, res) => {
   }).catch((err) => {
     res.send('Cast Error - invalid id entered');
   });
-})
+});
 
 // SERVER ===============================================================
 app.listen(port, () => {
