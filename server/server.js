@@ -1,9 +1,11 @@
+require('./config/config');
+
 const _           = require('lodash');
 const express     = require('express');
 const bodyParser  = require('body-parser');
 // prep for Heroku
 // (*create start script and "engines" to establish which version of Node to run on Heroku inside package.json )
-const port        = process.env.PORT || 3000;
+const port        = process.env.PORT;
 
 // ES6 destructured references (returned results populated into {} vars)
 const {mongoose}  = require('./db/mongoose');
@@ -20,7 +22,6 @@ app.use(bodyParser.json());
 // ==================================================================
 // CRUD for the API
 // ==================================================================
-
 // POST (CRUD - Create) =============================================
 // this gets the POST from POSTMAN's Body raw data in JSON format
 app.post('/todos', (req, res) => {
