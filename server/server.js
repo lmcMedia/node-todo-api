@@ -41,7 +41,7 @@ app.post('/todos', (req, res) => {
 app.get('/todos', (req, res) => {
    // get a list of todos back
    Todo.find().then((todos) => {
-     // send back the full list (we send back an object since we can add to the object if we want to later)
+     // send back an object since we can add to the object if we want to later
      res.send({todos});
    }, (e) => {
      res.status(400).send(e);
@@ -100,6 +100,23 @@ app.delete('/todos/:id', (req, res) => {
   }).catch((err) => {
     res.send('Cast Error - invalid id entered');
   });
+});
+
+
+// POST /users ========================================================
+app.post('/users', (req, res) => {
+  let body = _.pick(req.body, ['email', 'password']);
+  let user = new User(body); // you can just pass in the whole object
+  // the code below is not necessary
+  // var user = new User({ email: body.email, password: body.password });
+
+  user.save().then(() => {
+    return user.generateAuthToken(); // after this, then is called with the token
+  }).then((token) => {
+    // send back a header: key/value pair
+    // when you prefix a header with x- it is a custom header
+    res.header('x-auth', token).send(user);
+  }).catch((e) => res.status(400).send(e));
 });
 
 // SERVER ===============================================================
