@@ -5,17 +5,18 @@ const express     = require('express');
 const bodyParser  = require('body-parser');
 // prep for Heroku
 // (*create start script and "engines" to establish which version of Node to run on Heroku inside package.json )
-const port        = process.env.PORT;
+const port         = process.env.PORT;
 
 // ES6 destructured references (returned results populated into {} vars)
-const {mongoose}  = require('./db/mongoose');
-const {ObjectID}  = require('mongodb');
-const {Todo}      = require('./models/todo');
-const {User}      = require('./models/user');
+const {mongoose}      = require('./db/mongoose');
+const {ObjectID}      = require('mongodb');
+const {Todo}          = require('./models/todo');
+const {User}          = require('./models/user');
+const {authenticate}  = require('./middleware/authenticate');
 
 const app = express();
 
-// config Middleware - body-parse lets us send JSON to Express
+// body-parse lets us send JSON to Express
 // the return value of bodyParser.json() is a function that we need to give to Express
 app.use(bodyParser.json());
 
@@ -117,6 +118,11 @@ app.post('/users', (req, res) => {
     // when you prefix a header with x- it is a custom header
     res.header('x-auth', token).send(user);
   }).catch((e) => res.status(400).send(e));
+});
+
+// PRIVATE ROUTE with middleware defined (needs valid token to access)
+app.get('/users/me', authenticate, (req, res) => {
+  res.send(req.user);
 });
 
 // SERVER ===============================================================
