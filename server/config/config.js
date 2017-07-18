@@ -1,5 +1,6 @@
 var env = process.env.NODE_ENV || 'development';
 
+// automatically generates the database if it doesnt exist
 if (env === 'development') {
   process.env.PORT = 3000;
   process.env.MONGODB_URI = 'mongodb://localhost:27017/TodoApp';

@@ -6,29 +6,13 @@ const {app} = require('./../server');
 // can also do like this without destructuring
 //var app = require('./../server').app;
 const {Todo} = require('./../models/todo');
+const {User} = require('./../models/user');
 const {ObjectID} = require('mongodb');
-
-// Seed DATA for testing (we are not hitting the db)
-const todos = [{
-  _id: new ObjectID(),
-  text: 'First test todo'
-}, {
-  _id: new ObjectID(),
-  text: 'Second test todo',
-  completed: true,
-  completedAt: 333
-}];
+const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
 
 // lets us run code before each test case
-beforeEach((done) => {
-  // remove all items from Todo database for testing before any tests are run
-  //Todo.remove({}).then(() => done());
-
-  // insert many
-  Todo.remove({}).then(() => {
-    return Todo.insertMany(todos);
-  }).then(() => done());
-});
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 describe('Routes', () => {
   describe('HTTP Endpoints', () => {
@@ -204,5 +188,81 @@ describe('Routes', () => {
           .end(done);
       });
     });
-  });
-});
+
+    // GET /users/me  =======================================
+    describe('GET /users/me', () => {
+      it('should return user if authenticated', (done) => {
+        request(app)
+          .get('/users/me')
+          .set('x-auth', users[0].tokens[0].token)
+          .expect(200)
+          .expect((res) => {
+            expect(res.body._id).toBe(users[0]._id.toHexString());
+            expect(res.body.email).toBe(users[0].email);
+          })
+          .end(done);
+      });
+
+      it('should return 401 if not authenticated', (done) => {
+        request(app)
+          .get('/users/me')
+          .expect(401)
+          .expect((res) => {
+            expect(res.body).toEqual({}); // empty object with no data
+          })
+          .end(done);
+      });
+    });
+
+    // USER SIGN UP TESTS
+    describe('POST /users', () => {
+      it('should create a user', (done) => {
+        let email = 'example@example.com';
+        let password = '123mnb!'
+
+        request(app)
+          .post('/users')
+          .send({email, password})
+          .expect(200)
+          .expect((res) => {
+            expect(res.headers['x-auth']).toExist();
+            expect(res.body._id).toExist();
+            expect(res.body.email).toBe(email);
+          })
+          .end((err) => {
+            if (err) return done(err);
+            // check if the user exists after created
+            User.findOne({email}).then((user) => {
+              expect(user).toExist();
+              // expect pw to be hashed and not the value above
+              expect(user.password).toNotBe(password);
+              done();
+            });
+          });
+      });
+
+      it('should return validation errors if request invalid', (done) => {
+        request(app)
+          .post('/users')
+          .send({
+            email: 'bademail.com',
+            password: '12345' // less than 6 digits as defined in User
+          })
+          .expect(400)
+          .end(done);
+      })
+
+      it('should not create user if email in use', (done) => {
+        request(app)
+          .post('/users')
+          .send({
+            email: users[0].email,   // using seed email that already exists
+            password: users[0].password
+          })
+          .expect(400)
+          .end(done);
+      })
+    });
+
+  }); // end HTTP Endpoints
+}); // end routes
