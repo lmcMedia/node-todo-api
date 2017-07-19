@@ -134,6 +134,17 @@ app.post('/users/login', (req, res) => {
   });
 });
 
+// DELETE /users/me/token delete token from currently logged in user ===
+// Using authenticate middleware because the token is
+// stored in the middleware @ req.token = token;
+app.delete('/users/me/token', authenticate, (req, res) => {
+  req.user.removeToken(req.token).then(() => {
+    res.status(200).send();
+  }, () => {
+    res.status(400).send();
+  })
+});
+
 // PRIVATE ROUTE with middleware defined (needs valid token to access)
 // only use authenticate when a token is present
 app.get('/users/me', authenticate, (req, res) => {

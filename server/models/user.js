@@ -33,6 +33,9 @@ var UserSchema = new mongoose.Schema({
   }]
 });
 
+// =====================================================================
+// MODEL methods
+// =====================================================================
 // determines what is sent back when a Mongoose model
 // is converted to a JSON object
 UserSchema.methods.toJSON = function () {
@@ -58,6 +61,23 @@ UserSchema.methods.generateAuthToken = function () {
   });
 };
 
+// Remove any object from the array that has a token property = to the
+// the value that we pass in. This will delete the users current token.
+// Using MonogoDB operator called $pull. Lets you remove items from an
+// array that match certain criteria
+UserSchema.methods.removeToken = function (token) {
+  var user = this;
+
+  return user.update({
+    $pull: {
+      tokens: {token}
+    }
+  });
+};
+
+// =====================================================================
+// STATIC methods
+// =====================================================================
 // Model method, not instance method
 UserSchema.statics.findByToken = function (token) {
   let User = this;
@@ -97,6 +117,9 @@ UserSchema.statics.findByCredentials = function (email,password) {
   });
 };
 
+// =====================================================================
+// PRE method
+// =====================================================================
 // need access to 'this' so we cannot use ES6 () =>
 UserSchema.pre('save', function (next) {
   var user = this;
