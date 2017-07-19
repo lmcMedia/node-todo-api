@@ -25,6 +25,7 @@ describe('Routes', () => {
 
         request(app)
         .post('/todos')
+        .set('x-auth', users[0].tokens[0].token) // used for authentication token
         .send({text}) // must use send when using post
         .expect(200)
         .expect((res) => {
@@ -50,6 +51,7 @@ describe('Routes', () => {
       it('should not create todo with invalid body data', (done) => {
         request(app)
         .post('/todos')
+        .set('x-auth', users[0].tokens[0].token) // used for authentication token
         .send({}) // send with no data
         .expect(400)
         .end((err, res) => {
@@ -70,9 +72,10 @@ describe('Routes', () => {
           // supertest request
           request(app)
           .get('/todos')
+          .set('x-auth', users[0].tokens[0].token) // used for authentication token
           .expect(200)
           .expect((res) => {
-            expect(res.body.todos.length).toBe(2);
+            expect(res.body.todos.length).toBe(1); // only 1 record in seed data
           })
           .end(done);
       });
@@ -83,6 +86,7 @@ describe('Routes', () => {
       it('should return todo doc', (done) => {
         request(app)
           .get(`/todos/${todos[0]._id.toHexString()}`)
+          .set('x-auth', users[0].tokens[0].token) // authenticates user
           .expect(200)
           .expect((res) => {
             // called todo in the function so we target the body of todo here
@@ -91,12 +95,21 @@ describe('Routes', () => {
           .end(done);
       });
 
-      it('should return a 404 if todo not found', (done) => {
+      it('should not return todo doc created by other user', (done) => {
+        request(app)
+          .get(`/todos/${todos[1]._id.toHexString()}`) // grab 2nd users id
+          .set('x-auth', users[0].tokens[0].token) // authenticate 1st user
+          .expect(404)
+          .end(done);
+      });
+
+      it('should return 404 if todo not found', (done) => {
         // make sure you get a 404 back
         // real object id calling its toHexString method
         let id = new ObjectID().toHexString();
         request(app)
           .get(`/todos/${id}`)
+          .set('x-auth', users[0].tokens[0].token)
           .expect(404)
           .end(done);
       });
@@ -104,6 +117,7 @@ describe('Routes', () => {
       it('should return 404 for non-object ids', (done) => {
         request(app)
           .get('/todos/123abc')
+          .set('x-auth', users[0].tokens[0].token)
           .expect(404)
           .end(done);
       })
@@ -115,6 +129,7 @@ describe('Routes', () => {
         let hexId = todos[1]._id.toHexString();
         request(app)
           .delete(`/todos/${hexId}`)
+          .set('x-auth', users[1].tokens[0].token) // authenticated as 2nd user same as hexId
           .expect(200)
           .expect((res) => {
             expect(res.body.todo._id).toBe(hexId)
@@ -130,10 +145,28 @@ describe('Routes', () => {
         });
       });
 
+      it('should NOT remove a todo from different user', (done) => {
+        let hexId = todos[0]._id.toHexString();
+        request(app)
+          .delete(`/todos/${hexId}`)
+          .set('x-auth', users[1].tokens[0].token) // authenticated as 2nd user diff than hexId
+          .expect(404)
+          .end((err, res) => {
+            if (err) return done(err);
+
+            // query db using findById toNotExist
+            Todo.findById(hexId).then((todo) => {
+              expect(todo).toExist(); // deletion shouldnt happen
+              done();
+          }).catch((err) => done(err));
+        });
+      });
+
       it('should return a 404 if todo not found', (done) => {
         let id = new ObjectID().toHexString(); // create new id not in db
         request(app)
           .delete(`/todos/${id}`)
+          .set('x-auth', users[1].tokens[0].token)
           .expect(404)
           .end(done);
       });
@@ -142,6 +175,7 @@ describe('Routes', () => {
         let id = new ObjectID().toHexString(); // create new id not in db
         request(app)
           .delete(`/todos/123abc`)
+          .set('x-auth', users[1].tokens[0].token)
           .expect(404)
           .end(done);
       });
@@ -155,6 +189,7 @@ describe('Routes', () => {
 
         request(app)
           .patch(`/todos/${id}`)
+          .set('x-auth', users[0].tokens[0].token) // authenticated as 1st user same
           .send({
             completed: true,
             text
@@ -168,12 +203,28 @@ describe('Routes', () => {
           .end(done);
       });
 
+      it('should not update the todo created by another user', (done) => {
+        let id = todos[0]._id.toHexString();
+        let text = 'Test Todo text';
+
+        request(app)
+          .patch(`/todos/${id}`)
+          .set('x-auth', users[1].tokens[0].token) // authenticated as 2nd user diff
+          .send({
+            completed: true,
+            text
+          })
+          .expect(404)
+          .end(done);
+      });
+
       it('should clear completedAt when todo is not completed', (done) => {
         let id = todos[1]._id.toHexString();
         let text = 'Something Different for 2';
 
         request(app)
           .patch(`/todos/${id}`)
+          .set('x-auth', users[1].tokens[0].token) // authenticated as 2nd user same
           .send({
             completed: false,
             text
@@ -280,7 +331,7 @@ describe('Routes', () => {
           .end((err, res) => {
             if (err) return done(err);
             User.findById(users[1]._id).then((user) => {
-              expect(user.tokens[0]).toInclude({
+              expect(user.tokens[1]).toInclude({
                 access: 'auth',
                 token: res.headers['x-auth']
               });
@@ -303,7 +354,7 @@ describe('Routes', () => {
           .end((err, res) => {
             if (err) return done(err);
             User.findById(users[1]._id).then((user) => {
-              expect(user.tokens.length).toBe(0);
+              expect(user.tokens.length).toBe(1); // seed data contains 1 token
               done();
             }).catch((e) => done(e));
           });

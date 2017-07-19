@@ -19,18 +19,24 @@ const users = [{
   }, {
     _id: userTwoId,
     email: 'test@example.com',
-    password: 'user2pass'
+    password: 'user2pass',
+    tokens: [{
+      access: 'auth',
+      token: jwt.sign({_id:userTwoId, access:'auth'}, 'abc123').toString(),
+    }]
 }]
 
 // Seed DATA for testing todos (we are not hitting the db)
 const todos = [{
   _id: new ObjectID(),
-  text: 'First test todo'
+  text: 'First test todo',
+  _creator: userOneId
 }, {
   _id: new ObjectID(),
   text: 'Second test todo',
   completed: true,
-  completedAt: 333
+  completedAt: 333,
+  _creator: userTwoId
 }];
 
 // populate with many todos (Todo.remove({}) removes all records first)

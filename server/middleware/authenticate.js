@@ -1,6 +1,6 @@
 var {User} = require('./../models/user');
 
-// middleware function
+// middleware function using a x-auth header jwt token
 var authenticate = (req, res, next) => {
   let token = req.header('x-auth');
 

@@ -14,6 +14,11 @@ var Todo = mongoose.model('Todo', {
   completedAt: {
     type: Number,
     default: null
+  },
+  // associate a Todo with a specific user
+  _creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
   }
 });
 

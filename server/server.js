@@ -25,10 +25,11 @@ app.use(bodyParser.json());
 // ==================================================================
 // POST (CRUD - Create) =============================================
 // this gets the POST from POSTMAN's Body raw data in JSON format
-app.post('/todos', (req, res) => {
+app.post('/todos', authenticate, (req, res) => {
   // create instance of Mongoose Model Todo
   var todo = new Todo({
-    text: req.body.text
+    text: req.body.text,
+    _creator: req.user._id
   });
 
   // Save the data to MongoDB Todo that was POSTed from /todos url
@@ -39,9 +40,10 @@ app.post('/todos', (req, res) => {
 });
 
 // GET ALL TODOS (CRUD - Read) =======================================
-app.get('/todos', (req, res) => {
-   // get a list of todos back
-   Todo.find().then((todos) => {
+app.get('/todos', authenticate, (req, res) => {
+   // get a list of todos back from a specific ID. Other users cannot see.
+   // other users will not be able to view since this route is authenticated
+   Todo.find({_creator: req.user._id}).then((todos) => {
      // send back an object since we can add to the object if we want to later
      res.send({todos});
    }, (e) => {
@@ -52,7 +54,7 @@ app.get('/todos', (req, res) => {
 // GET WITH ID (CRUD - Read) ==========================================
 // creates id variable in the todos/ url like todos/123456
 // so the API call containing the Todo id will receive back data
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate, (req, res) => {
   var id = req.params.id;
   // use Mongoose ObjectID to validate id
   if (!ObjectID.isValid(id))
@@ -60,21 +62,22 @@ app.get('/todos/:id', (req, res) => {
 
   // find the Todo by the id in the url
   // res.send sends back either the todo object or an error
-  Todo.findById(id).then((todo) => {
+  Todo.findOne({_id: id, _creator: req.user._id}).then((todo) => {
     if (!todo) return res.status(404).send('Todo id cannot be found.');
     res.send({todo});
   }).catch((err) => res.send('CAST ERROR - invalid id entered'));
 });
 
 // PATCH (CRUD - Update) =============================================
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate, (req, res) => {
   let id = req.params.id;
   // lodash pick sets up which properties on the body can be updated.
   // we dont want users updating or adding properties that arent specified here
   // EXACTLY the same as Laravel's protected $fillable
   let body = _.pick(req.body, ['text', 'completed']);
 
-  if (!ObjectID.isValid(req.params.id)) return res.status(404).send('Invalid ID entered');
+  if (!ObjectID.isValid(id))
+    return res.status(404).send('Invalid ID entered');
 
   // update completedAt property when changes on completed occur
   if (_.isBoolean(body.completed) && body.completed) {
@@ -84,22 +87,30 @@ app.patch('/todos/:id', (req, res) => {
     body.completedAt = null;
   }
 
-  // update the Todo
-  Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
+  // update the Todo with authentication
+  Todo.findOneAndUpdate({
+    _id: id,
+    _creator: req.user._id
+  }, {$set: body}, {new: true}).then((todo) => {
     if (!todo) return res.status(404).send();
     res.send({todo});
   }).catch((e) => res.status(400).send());
 });
 
 // DELETE WITH ID (CRUD - Delete) =====================================
-app.delete('/todos/:id', (req, res) => {
-  if (!ObjectID.isValid(req.params.id)) return res.status(404).send('Invalid ID entered');
+app.delete('/todos/:id', authenticate, (req, res) => {
+  let id = req.params.id;
+  if (!ObjectID.isValid(id))
+    return res.status(404).send('Invalid ID entered');
 
-  Todo.findByIdAndRemove(req.params.id).then((todo) => {
+  Todo.findOneAndRemove({
+    _id: id,
+    _creator: req.user._id
+  }).then((todo) => {
     if(!todo) return res.status(404).send('Todo id cannot be found.'); // prevents null
-    res.status(200).send({todo});
-  }).catch((err) => {
-    res.send('Cast Error - invalid id entered');
+    res.send({todo});
+  }).catch((e) => {
+    res.status(400).send('Cast Error - invalid id entered');
   });
 });
 
